@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"text/tabwriter"
 )
@@ -35,12 +36,19 @@ var info = map[string]*LanguageStats{}
 var files []string
 
 var languages = []Language{
+	Language{"Batch", matchExt(".bat", ".cmd"), "REM", "", ""},
+	Language{"C", matchExt(".c", ".cc", ".h"), "//", "/*", "*/"},
+	Language{"C++", matchExt(".cpp", ".cxx"), "//", "/*", "*/"},
 	Language{"C#", matchExt(".cs"), "//", "/*", "*/"},
-	Language{"Bash", matchExt(".sh", ".bashrc"), "#", "", ""},
+	Language{"Clojure", matchExt(".clj", ".cljs", ".cljc", ".cljx", ".clojure", ".edn"), ";;", "", ""},
+	Language{"Coffeescript", matchExt(".coffee", ".cson"), "#", "###", "###"},
+	Language{"CSS", matchExt(".css"), "", "/*", "*/"},
+	Language{"Bash", matchExt(".sh", ".bashrc", ".bash_profile"), "#", "", ""},
 	Language{"Golang", matchExt(".go"), "//", "/*", "*/"},
 	Language{"Html", matchExt(".html"), "", "<!--", "-->"},
 	Language{"JavaScript", matchExt(".js"), "//", "/*", "*/"},
 	Language{"JSON", matchExt(".json"), "", "", ""},
+	Language{"LESS", matchExt(".less"), "//", "/*", "*/"},
 	Language{"Python", matchExt(".py"), "#", `"""`, `"""`},
 	Language{"SCSS", matchExt(".scss"), "//", "/*", "*/"},
 	Language{"Typescript", matchExt(".ts"), "//", "/*", "*/"},
@@ -130,7 +138,12 @@ func countFileLines(filepath string) {
 	}
 }
 
-func handleFile(filepath string) {
+func handleFile(filepath string, exclude string) {
+	matched, _ := regexp.MatchString(exclude, filepath)
+	if exclude != "" && matched {
+		return
+	}
+
 	fileInfo, err := os.Stat(filepath)
 	check(err)
 
@@ -144,7 +157,7 @@ func handleFile(filepath string) {
 				continue
 			}
 
-			handleFile(path.Join(filepath, name))
+			handleFile(path.Join(filepath, name), exclude)
 		}
 	} else if fileInfo.Mode()&os.ModeType == 0 {
 		countFileLines(filepath)
@@ -152,11 +165,15 @@ func handleFile(filepath string) {
 }
 
 func main() {
+	var exclude string
+
+	flag.StringVar(&exclude, "exclude", "", "A regular expression for directories/files to exclude.")
 	flag.Parse()
+
 	args := flag.Args()
 
 	for _, path := range args {
-		handleFile(path)
+		handleFile(path, exclude)
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 2, 8, 2, ' ', tabwriter.AlignRight)
