@@ -10,8 +10,10 @@ import (
 	"text/tabwriter"
 )
 
+// Matcher : A function that attempts to match a given string.
 type Matcher func(string) bool
 
+// Language : A programming language and it's details.
 type Language struct {
 	Name              string
 	ExtensionMatcher  func(string) bool
@@ -20,6 +22,7 @@ type Language struct {
 	BlockCommentEnd   string
 }
 
+// LanguageStats : The statistics gatherd about a source file.
 type LanguageStats struct {
 	Lang         Language
 	FileCount    int
@@ -32,10 +35,13 @@ var info = map[string]*LanguageStats{}
 var files []string
 
 var languages = []Language{
+	Language{"C#", matchExt(".cs"), "//", "/*", "*/"},
 	Language{"Bash", matchExt(".sh", ".bashrc"), "#", "", ""},
 	Language{"Golang", matchExt(".go"), "//", "/*", "*/"},
-	Language{"Html", matchExt(".html"), "", "/*", "*/"},
+	Language{"Html", matchExt(".html"), "", "<!--", "-->"},
+	Language{"JavaScript", matchExt(".js"), "//", "/*", "*/"},
 	Language{"JSON", matchExt(".json"), "", "", ""},
+	Language{"Python", matchExt(".py"), "#", `"""`, `"""`},
 	Language{"SCSS", matchExt(".scss"), "//", "/*", "*/"},
 	Language{"Typescript", matchExt(".ts"), "//", "/*", "*/"},
 }
@@ -155,10 +161,19 @@ func main() {
 
 	w := tabwriter.NewWriter(os.Stdout, 2, 8, 2, ' ', tabwriter.AlignRight)
 	fmt.Fprintln(w, "Language\tFiles\tCode\tComment\tBlank\t")
+	total := LanguageStats{Language{}, 0, 0, 0, 0}
+	total.Lang.Name = "Total"
 
 	for _, langInfo := range info {
 		fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.EmptyLines)
+		total.FileCount += langInfo.FileCount
+		total.CodeLines += langInfo.CodeLines
+		total.CommentLines += langInfo.CommentLines
+		total.EmptyLines += langInfo.EmptyLines
 	}
+
+	fmt.Fprintln(w, "\t\t\t\t\t")
+	fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", total.Lang.Name, total.FileCount, total.CodeLines, total.CommentLines, total.EmptyLines)
 
 	w.Flush()
 }
