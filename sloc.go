@@ -1,27 +1,22 @@
-package main
+package sloc
 
 import (
-	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
 	"strings"
-	"text/tabwriter"
 )
-
-// Matcher : A function that attempts to match a given string.
-type Matcher func(string) bool
 
 // Language : A programming language and it's details.
 type Language struct {
-	Name              string
-	ExtensionMatcher  func(string) bool
-	LineComment       string
-	BlockCommentStart string
-	BlockCommentEnd   string
+	Name       string
+	Extensions []string
+	Comments   CommentData
 }
+
+// Info : The statistics gathered from all files counted.
+type Info map[string]*LanguageStats
 
 // LanguageStats : The statistics gatherd about a source file.
 type LanguageStats struct {
@@ -32,55 +27,37 @@ type LanguageStats struct {
 	EmptyLines   int
 }
 
-var info = map[string]*LanguageStats{}
+// CommentData : The data describing comment lines/blocks for a longuage.
+type CommentData struct {
+	LineCommentPrefixes []string
+	BlockCommentPrefix  string
+	BlockCommentSuffix  string
+}
+
+// Options : The options available to the line counter.
+type Options struct {
+	Include string
+	Exclude string
+}
+
+// CountLines : Counts the lines of a file, or recursively counts the lines of all files in a directory.
+func CountLines(filepath string, options Options) Info {
+	countLines(filepath, options)
+	return info
+}
+
+var info = Info{}
 var files []string
 
-var languages = []Language{
-	Language{"Batch", matchExt(".bat", ".cmd"), "REM", "", ""},
-	Language{"C", matchExt(".c", ".cc", ".h"), "//", "/*", "*/"},
-	Language{"C++", matchExt(".cpp", ".cxx"), "//", "/*", "*/"},
-	Language{"C#", matchExt(".cs"), "//", "/*", "*/"},
-	Language{"Clojure", matchExt(".clj", ".cljs", ".cljc", ".cljx", ".clojure", ".edn"), ";;", "", ""},
-	Language{"Coffeescript", matchExt(".coffee", ".cson"), "#", "###", "###"},
-	Language{"CSS", matchExt(".css"), "", "/*", "*/"},
-	Language{"Bash", matchExt(".sh", ".bashrc", ".bash_profile"), "#", "", ""},
-	Language{"Golang", matchExt(".go"), "//", "/*", "*/"},
-	Language{"Html", matchExt(".html"), "", "<!--", "-->"},
-	Language{"JavaScript", matchExt(".js"), "//", "/*", "*/"},
-	Language{"JSON", matchExt(".json"), "", "", ""},
-	Language{"LESS", matchExt(".less"), "//", "/*", "*/"},
-	Language{"Python", matchExt(".py"), "#", `"""`, `"""`},
-	Language{"SCSS", matchExt(".scss"), "//", "/*", "*/"},
-	Language{"Typescript", matchExt(".ts"), "//", "/*", "*/"},
-}
-
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 func getLang(filename string) Language {
+	ext := path.Ext(filename)
 	for _, lang := range languages {
-		if lang.ExtensionMatcher(filename) {
+		if contains(lang.Extensions, ext) {
 			return lang
 		}
 	}
 
-	return Language{"none", matchExt(), "", "", ""}
-}
-
-func matchExt(extensions ...string) Matcher {
-	return func(filename string) bool {
-		ext := path.Ext(filename)
-		for _, e := range extensions {
-			if ext == e {
-				return true
-			}
-		}
-
-		return false
-	}
+	return Language{"none", []string{}, CommentData{}}
 }
 
 func countFileLines(filepath string) {
@@ -108,18 +85,22 @@ func countFileLines(filepath string) {
 			continue
 		}
 
-		if inComment && lang.BlockCommentEnd != "" && strings.Contains(line, lang.BlockCommentEnd) {
+		lineComment := startsWithOneOf(line, lang.Comments.LineCommentPrefixes)
+		startsComment := lang.Comments.BlockCommentPrefix != "" && strings.HasPrefix(line, lang.Comments.BlockCommentPrefix)
+		endsComment := strings.Contains(line, lang.Comments.BlockCommentSuffix)
+
+		if lineComment || startsComment && endsComment {
+			commentLines++
+			continue
+		}
+
+		if inComment && endsComment {
 			inComment = false
 			commentLines++
 			continue
 		}
 
-		if inComment || lang.LineComment != "" && strings.HasPrefix(line, lang.LineComment) {
-			commentLines++
-			continue
-		}
-
-		if lang.BlockCommentStart != "" && strings.HasPrefix(line, lang.BlockCommentStart) {
+		if inComment || startsComment {
 			inComment = true
 			commentLines++
 			continue
@@ -134,13 +115,21 @@ func countFileLines(filepath string) {
 		val.EmptyLines += emptyLines
 		val.FileCount++
 	} else {
-		info[lang.Name] = &LanguageStats{lang, 1, codeLines, commentLines, emptyLines}
+		info[lang.Name] = &LanguageStats{
+			lang,
+			1,
+			codeLines,
+			commentLines,
+			emptyLines,
+		}
 	}
 }
 
-func handleFile(filepath string, exclude string) {
-	matched, _ := regexp.MatchString(exclude, filepath)
-	if exclude != "" && matched {
+func countLines(filepath string, options Options) {
+	shouldInclude, _ := regexp.MatchString(options.Include, filepath)
+	shouldExclude, _ := regexp.MatchString(options.Exclude, filepath)
+
+	if options.Exclude != "" && shouldExclude {
 		return
 	}
 
@@ -157,40 +146,101 @@ func handleFile(filepath string, exclude string) {
 				continue
 			}
 
-			handleFile(path.Join(filepath, name), exclude)
+			CountLines(path.Join(filepath, name), options)
 		}
-	} else if fileInfo.Mode()&os.ModeType == 0 {
+	} else if shouldInclude && fileInfo.Mode()&os.ModeType == 0 {
 		countFileLines(filepath)
 	}
 }
 
-func main() {
-	var exclude string
+var languages = []Language{
+	Language{"Assembly", []string{".asm", ".s"}, semiComments},
+	Language{"Bash", []string{".bash", ".bashrc", ".bash_profile"}, bashComments},
+	Language{"Batch", []string{".bat", ".cmd"}, batchComments},
+	Language{"C", []string{".c", ".cc", ".h"}, cComments},
+	Language{"C++", []string{".cpp", ".cxx"}, cComments},
+	Language{"C#", []string{".cs"}, cComments},
+	Language{"Clojure", []string{".clj", ".cljs", ".cljc", ".cljx", ".clojure", ".edn"}, clojureComments},
+	Language{"Coffeescript", []string{".coffee", ".cson"}, coffeeComments},
+	Language{"CSS", []string{".css"}, cssComments},
+	Language{"Erlang", []string{".erl"}, erlangComments},
+	Language{"Golang", []string{".go"}, cComments},
+	Language{"Groovy", []string{".groovy"}, cComments},
+	Language{"Haskell", []string{".hs", ".lhs"}, haskellComments},
+	Language{"Html", []string{".html"}, xmlComments},
+	Language{"Java", []string{".java"}, cComments},
+	Language{"JavaScript", []string{".js"}, cComments},
+	Language{"JSON", []string{".json"}, noComments},
+	Language{"Kotlin", []string{".kt"}, cComments},
+	Language{"LESS", []string{".less"}, cComments},
+	Language{"Lisp", []string{".lsp", ".lisp"}, semiComments},
+	Language{"Lua", []string{".lua"}, luaComments},
+	Language{"Make", []string{"makefile", "Makefile", "MAKEFILE"}, bashComments},
+	Language{"Markdown", []string{".md"}, noComments},
+	Language{"Objective-C", []string{".m", ".mm", ".M"}, cComments},
+	Language{"Perl", []string{".pl", ".pm"}, perlComments},
+	Language{"PHP", []string{".php", ".php3", ".php4", ".php5", ".phtml"}, phpComments},
+	Language{"Python", []string{".py"}, pythonComments},
+	Language{"R", []string{".r", ".R"}, bashComments},
+	Language{"Ruby", []string{".rb"}, rubyComments},
+	Language{"Rust", []string{".rs", ".rc"}, cComments},
+	Language{"Scala", []string{".scala"}, cComments},
+	Language{"Scheme", []string{".scm", ".scheme"}, semiComments},
+	Language{"Swift", []string{".swift"}, cComments},
+	Language{"SASS", []string{".sass"}, cComments},
+	Language{"SCSS", []string{".scss"}, cComments},
+	Language{"Shell", []string{".sh"}, bashComments},
+	Language{"SQL", []string{".sql"}, sqlComments},
+	Language{"Typescript", []string{".ts"}, cComments},
+	Language{"VimL", []string{".vim"}, vimComments},
+	Language{"Visual Basic", []string{".vb"}, vbComments},
+	Language{"XML", []string{".xml"}, xmlComments},
+}
 
-	flag.StringVar(&exclude, "exclude", "", "A regular expression for directories/files to exclude.")
-	flag.Parse()
+var (
+	noComments      = CommentData{[]string{}, "", ""}
+	bashComments    = CommentData{[]string{"#"}, "", ""}
+	batchComments   = CommentData{[]string{"REM"}, "", ""}
+	cComments       = CommentData{[]string{"//"}, "/*", "*/"}
+	clojureComments = CommentData{[]string{";;"}, "", ""}
+	coffeeComments  = CommentData{[]string{"#"}, "###", "###"}
+	cssComments     = CommentData{[]string{}, "/*", "*/"}
+	erlangComments  = CommentData{[]string{"%"}, "", ""}
+	haskellComments = CommentData{[]string{"--"}, "{-", "-}"}
+	luaComments     = CommentData{[]string{"--"}, "--[[", "]]"}
+	perlComments    = CommentData{[]string{"#"}, "###", "###"}
+	phpComments     = CommentData{[]string{"//", "#"}, "/*", "*/"}
+	pythonComments  = CommentData{[]string{"#"}, `"""`, `"""`}
+	rubyComments    = CommentData{[]string{"#"}, "=begin", "=end"}
+	semiComments    = CommentData{[]string{";"}, "", ""}
+	sqlComments     = CommentData{[]string{"--"}, "/*", "*/"}
+	vbComments      = CommentData{[]string{"'"}, "", ""}
+	vimComments     = CommentData{[]string{`"`}, "", ""}
+	xmlComments     = CommentData{[]string{}, "<!--", "-->"}
+)
 
-	args := flag.Args()
-
-	for _, path := range args {
-		handleFile(path, exclude)
+func contains(array []string, element string) bool {
+	for _, e := range array {
+		if e == element {
+			return true
+		}
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 2, 8, 2, ' ', tabwriter.AlignRight)
-	fmt.Fprintln(w, "Language\tFiles\tCode\tComment\tBlank\t")
-	total := LanguageStats{Language{}, 0, 0, 0, 0}
-	total.Lang.Name = "Total"
+	return false
+}
 
-	for _, langInfo := range info {
-		fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.EmptyLines)
-		total.FileCount += langInfo.FileCount
-		total.CodeLines += langInfo.CodeLines
-		total.CommentLines += langInfo.CommentLines
-		total.EmptyLines += langInfo.EmptyLines
+func startsWithOneOf(str string, prefixes []string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(str, prefix) {
+			return true
+		}
 	}
 
-	fmt.Fprintln(w, "\t\t\t\t\t")
-	fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", total.Lang.Name, total.FileCount, total.CodeLines, total.CommentLines, total.EmptyLines)
+	return false
+}
 
-	w.Flush()
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
