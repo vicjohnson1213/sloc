@@ -8,39 +8,40 @@ import (
 	"strings"
 )
 
-// Language : A programming language and it's details.
+// Language is a single programming language and it's details.
 type Language struct {
-	Name       string
-	Extensions []string
-	Comments   CommentData
+	Name       string      `json:"Name"`
+	Extensions []string    `json:"Extensions"`
+	Comments   CommentData `json:"Comments"`
 }
 
-// Info : The statistics gathered from all files counted.
+// Info are the statistics gathered from all files counted.
 type Info map[string]*LanguageStats
 
-// LanguageStats : The statistics gatherd about a source file.
+// LanguageStats are the statistics gatherd about a source file type.
 type LanguageStats struct {
-	Lang         Language
-	FileCount    int
-	CodeLines    int
-	CommentLines int
-	EmptyLines   int
+	Lang         Language `json:"Language"`
+	FileCount    int      `json:"FileCount"`
+	CodeLines    int      `json:"CodeLines"`
+	CommentLines int      `json:"CommentLines"`
+	EmptyLines   int      `json:"EmptyLines"`
 }
 
-// CommentData : The data describing comment lines/blocks for a longuage.
+// CommentData describes comment lines/blocks for a longuage.
 type CommentData struct {
-	LineCommentPrefixes []string
-	BlockCommentPrefix  string
-	BlockCommentSuffix  string
+	LineCommentPrefixes []string `json:"LineCommentPrefixes"`
+	BlockCommentPrefix  string   `json:"BlockCommentPrefix"`
+	BlockCommentSuffix  string   `json:"BlockCommentSuffix"`
 }
 
-// Options : The options available to the line counter.
+// Options are the options available to the line counter.
 type Options struct {
 	Include string
 	Exclude string
+	Format  string
 }
 
-// CountLines : Counts the lines of a file, or recursively counts the lines of all files in a directory.
+// CountLines counts the lines of a file or recursively counts the lines of all files in a directory.
 func CountLines(filepath string, options Options) Info {
 	countLines(filepath, options)
 	return info

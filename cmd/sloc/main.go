@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -11,9 +12,17 @@ import (
 
 func main() {
 	options := sloc.Options{}
+	var format string
 
 	flag.StringVar(&options.Include, "include", "", "A regular expression for directories/files to include.")
+	flag.StringVar(&options.Include, "i", "", "A regular expression for directories/files to include.")
+
 	flag.StringVar(&options.Exclude, "exclude", "", "A regular expression for directories/files to exclude.")
+	flag.StringVar(&options.Exclude, "e", "", "A regular expression for directories/files to exclude.")
+
+	flag.StringVar(&format, "format", "table", "The desired output format (table, JSON).")
+	flag.StringVar(&format, "f", "table", "The desired output format (table, JSON).")
+
 	flag.Parse()
 
 	args := flag.Args()
@@ -24,6 +33,16 @@ func main() {
 
 	info := sloc.CountLines(args[0], options)
 
+	switch format {
+	case "table":
+		outputTable(info, options)
+	case "json":
+		outputJSON(info)
+	}
+
+}
+
+func outputTable(info sloc.Info, options sloc.Options) {
 	w := tabwriter.NewWriter(os.Stdout, 2, 8, 2, ' ', tabwriter.AlignRight)
 	fmt.Fprintln(w, "Language\tFiles\tCode\tComment\tBlank\t")
 	total := sloc.LanguageStats{
@@ -48,4 +67,9 @@ func main() {
 	fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", total.Lang.Name, total.FileCount, total.CodeLines, total.CommentLines, total.EmptyLines)
 
 	w.Flush()
+}
+
+func outputJSON(info sloc.Info) {
+	result, _ := json.MarshalIndent(info, "", "  ")
+	println(string(result))
 }
