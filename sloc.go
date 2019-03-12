@@ -38,7 +38,6 @@ type CommentData struct {
 type Options struct {
 	Include string
 	Exclude string
-	Format  string
 }
 
 // CountLines counts the lines of a file or recursively counts the lines of all files in a directory.
@@ -201,7 +200,7 @@ var languages = []Language{
 var (
 	noComments      = CommentData{[]string{}, "", ""}
 	bashComments    = CommentData{[]string{"#"}, "", ""}
-	batchComments   = CommentData{[]string{"REM"}, "", ""}
+	batchComments   = CommentData{[]string{"REM", "::"}, "", ""}
 	cComments       = CommentData{[]string{"//"}, "/*", "*/"}
 	clojureComments = CommentData{[]string{";;"}, "", ""}
 	coffeeComments  = CommentData{[]string{"#"}, "###", "###"}
