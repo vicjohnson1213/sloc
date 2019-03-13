@@ -29,9 +29,9 @@ type LanguageStats struct {
 
 // CommentData describes comment lines/blocks for a longuage.
 type CommentData struct {
-	LineCommentPrefixes []string `json:"LineCommentPrefixes"`
-	BlockCommentPrefix  string   `json:"BlockCommentPrefix"`
-	BlockCommentSuffix  string   `json:"BlockCommentSuffix"`
+	LineCommentPrefixes  []string `json:"LineCommentPrefixes"`
+	BlockCommentPrefixes []string `json:"BlockCommentPrefix"`
+	BlockCommentSuffixes []string `json:"BlockCommentSuffix"`
 }
 
 // Options are the options available to the line counter.
@@ -86,8 +86,8 @@ func countFileLines(filepath string) {
 		}
 
 		lineComment := startsWithOneOf(line, lang.Comments.LineCommentPrefixes)
-		startsComment := lang.Comments.BlockCommentPrefix != "" && strings.HasPrefix(line, lang.Comments.BlockCommentPrefix)
-		endsComment := strings.Contains(line, lang.Comments.BlockCommentSuffix)
+		startsComment := startsWithOneOf(line, lang.Comments.BlockCommentPrefixes)
+		endsComment := substrOneOf(line, lang.Comments.BlockCommentSuffixes)
 
 		if lineComment || startsComment && endsComment {
 			commentLines++
@@ -163,6 +163,8 @@ var languages = []Language{
 	Language{"Clojure", []string{".clj", ".cljs", ".cljc", ".cljx", ".clojure", ".edn"}, clojureComments},
 	Language{"Coffeescript", []string{".coffee", ".cson"}, coffeeComments},
 	Language{"CSS", []string{".css"}, cssComments},
+	Language{"D", []string{".d"}, dComments},
+	Language{"Dart", []string{".dart"}, cComments},
 	Language{"Erlang", []string{".erl"}, erlangComments},
 	Language{"Golang", []string{".go"}, cComments},
 	Language{"Groovy", []string{".groovy"}, cComments},
@@ -198,25 +200,26 @@ var languages = []Language{
 }
 
 var (
-	noComments      = CommentData{[]string{}, "", ""}
-	bashComments    = CommentData{[]string{"#"}, "", ""}
-	batchComments   = CommentData{[]string{"REM", "::"}, "", ""}
-	cComments       = CommentData{[]string{"//"}, "/*", "*/"}
-	clojureComments = CommentData{[]string{";;"}, "", ""}
-	coffeeComments  = CommentData{[]string{"#"}, "###", "###"}
-	cssComments     = CommentData{[]string{}, "/*", "*/"}
-	erlangComments  = CommentData{[]string{"%"}, "", ""}
-	haskellComments = CommentData{[]string{"--"}, "{-", "-}"}
-	luaComments     = CommentData{[]string{"--"}, "--[[", "]]"}
-	perlComments    = CommentData{[]string{"#"}, "###", "###"}
-	phpComments     = CommentData{[]string{"//", "#"}, "/*", "*/"}
-	pythonComments  = CommentData{[]string{"#"}, `"""`, `"""`}
-	rubyComments    = CommentData{[]string{"#"}, "=begin", "=end"}
-	semiComments    = CommentData{[]string{";"}, "", ""}
-	sqlComments     = CommentData{[]string{"--"}, "/*", "*/"}
-	vbComments      = CommentData{[]string{"'"}, "", ""}
-	vimComments     = CommentData{[]string{`"`}, "", ""}
-	xmlComments     = CommentData{[]string{}, "<!--", "-->"}
+	noComments      = CommentData{[]string{}, []string{}, []string{}}
+	bashComments    = CommentData{[]string{"#"}, []string{}, []string{}}
+	batchComments   = CommentData{[]string{"REM", "::"}, []string{}, []string{}}
+	cComments       = CommentData{[]string{"//"}, []string{"/*"}, []string{"*/"}}
+	clojureComments = CommentData{[]string{";;"}, []string{}, []string{}}
+	coffeeComments  = CommentData{[]string{"#"}, []string{"###"}, []string{"###"}}
+	cssComments     = CommentData{[]string{}, []string{"/*"}, []string{"*/"}}
+	dComments       = CommentData{[]string{"//"}, []string{"/*", "/+"}, []string{"*/", "+/"}}
+	erlangComments  = CommentData{[]string{"%"}, []string{}, []string{}}
+	haskellComments = CommentData{[]string{"--"}, []string{"{-"}, []string{"-}"}}
+	luaComments     = CommentData{[]string{"--"}, []string{"--[["}, []string{"]]"}}
+	perlComments    = CommentData{[]string{"#"}, []string{"###"}, []string{"###"}}
+	phpComments     = CommentData{[]string{"//", "#"}, []string{"/*"}, []string{"*/"}}
+	pythonComments  = CommentData{[]string{"#"}, []string{`"""`}, []string{`"""`}}
+	rubyComments    = CommentData{[]string{"#"}, []string{"=begin"}, []string{"=end"}}
+	semiComments    = CommentData{[]string{";"}, []string{""}, []string{""}}
+	sqlComments     = CommentData{[]string{"--"}, []string{"/*"}, []string{"*/"}}
+	vbComments      = CommentData{[]string{"'"}, []string{}, []string{}}
+	vimComments     = CommentData{[]string{`"`}, []string{}, []string{}}
+	xmlComments     = CommentData{[]string{}, []string{"<!--"}, []string{"-->"}}
 )
 
 func contains(array []string, element string) bool {
@@ -232,6 +235,16 @@ func contains(array []string, element string) bool {
 func startsWithOneOf(str string, prefixes []string) bool {
 	for _, prefix := range prefixes {
 		if strings.HasPrefix(str, prefix) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func substrOneOf(str string, substrs []string) bool {
+	for _, substr := range substrs {
+		if strings.Contains(str, substr) {
 			return true
 		}
 	}
