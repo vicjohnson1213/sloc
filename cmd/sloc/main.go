@@ -21,7 +21,7 @@ func main() {
 	flag.StringVar(&options.Exclude, "e", "", "A regular expression for directories/files to exclude.")
 
 	flag.StringVar(&format, "format", "table", "The desired output format (table, JSON).")
-	flag.StringVar(&format, "f", "table", "The desired output format (table, JSON).")
+	flag.StringVar(&format, "f", "table", "The desired output format (table, json, csv).")
 
 	flag.Parse()
 
@@ -34,26 +34,25 @@ func main() {
 	info := sloc.CountLines(args[0], options)
 
 	switch format {
-	case "table":
-		outputTable(info, options)
 	case "json":
 		outputJSON(info)
+	case "csv":
+		outputCSV(info)
+	default:
+		outputTable(info)
 	}
-
 }
 
-func outputTable(info sloc.Info, options sloc.Options) {
+func outputTable(info sloc.Info) {
 	w := tabwriter.NewWriter(os.Stdout, 2, 8, 2, ' ', tabwriter.AlignRight)
 	fmt.Fprintln(w, "Language\tFiles\tCode\tComment\tBlank\t")
 	total := sloc.LanguageStats{
-		Lang:         sloc.Language{},
+		Lang:         sloc.Language{Name: "Total"},
 		FileCount:    0,
 		CodeLines:    0,
 		CommentLines: 0,
 		EmptyLines:   0,
 	}
-
-	total.Lang.Name = "Total"
 
 	for _, langInfo := range info {
 		fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.EmptyLines)
@@ -67,6 +66,14 @@ func outputTable(info sloc.Info, options sloc.Options) {
 	fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", total.Lang.Name, total.FileCount, total.CodeLines, total.CommentLines, total.EmptyLines)
 
 	w.Flush()
+}
+
+func outputCSV(info sloc.Info) {
+	println("Language, Files, Code, Comment, Blank")
+
+	for _, langInfo := range info {
+		fmt.Printf("%s, %d, %d, %d, %d\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.EmptyLines)
+	}
 }
 
 func outputJSON(info sloc.Info) {

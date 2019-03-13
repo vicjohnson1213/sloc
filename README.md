@@ -24,7 +24,7 @@ sloc [options] <file>|<directory>
 ```
 -e, --exclude <regex>      A regular expression for files to exclude from counting.
 -i, --include <regex>      A regular expression for files to include. Excluded files will NOT be counted.
--f, --format <table|json>  The ouput format for the counting results.
+-f, --format <table|json|csv>  The ouput format for the counting results. Table is the default.
 ```
 
 #### Examples
@@ -32,16 +32,6 @@ sloc [options] <file>|<directory>
 ```
 $ sloc src/
 
-   Language  Files  Code  Comment  Blank
-  JavaScript     16   557        2    151
-        JSON      4   739        0      3
-    Markdown      2    14        0      9
-
-       Total     22  1310        2    163
-```
-
-```
-$ sloc --exclude node_modules src
       Language  Files    Code  Comment  Blank
           JSON    123   18133        0    189
       Markdown    123   18588        0   7174
@@ -55,6 +45,17 @@ $ sloc --exclude node_modules src
          Shell      2      28        2     15
 
          Total   2295  198847    52580  31912
+```
+
+```
+$ sloc --exclude node_modules src/
+
+   Language  Files  Code  Comment  Blank
+  JavaScript     16   557        2    151
+        JSON      4   739        0      3
+    Markdown      2    14        0      9
+
+       Total     22  1310        2    163
 ```
 
 ### Supported Languages
