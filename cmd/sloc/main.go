@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
 	"text/tabwriter"
 
 	"github.com/vicjohnson1213/sloc"
@@ -45,25 +46,34 @@ func main() {
 
 func outputTable(info sloc.Info) {
 	w := tabwriter.NewWriter(os.Stdout, 2, 8, 2, ' ', tabwriter.AlignRight)
-	fmt.Fprintln(w, "Language\tFiles\tCode\tComment\tBlank\t")
+	fmt.Fprintln(w, "Language\tFiles\tCode\tComment\tMixed\tBlank\t")
 	total := sloc.LanguageStats{
 		Lang:         sloc.Language{Name: "Total"},
 		FileCount:    0,
 		CodeLines:    0,
 		CommentLines: 0,
+		MixedLines:   0,
 		EmptyLines:   0,
 	}
 
-	for _, langInfo := range info {
-		fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.EmptyLines)
+	names := make([]string, 0, len(info))
+	for name := range info {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		langInfo := info[name]
+		fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t%d\t\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.MixedLines, langInfo.EmptyLines)
 		total.FileCount += langInfo.FileCount
 		total.CodeLines += langInfo.CodeLines
 		total.CommentLines += langInfo.CommentLines
+		total.MixedLines += langInfo.MixedLines
 		total.EmptyLines += langInfo.EmptyLines
 	}
 
-	fmt.Fprintln(w, "\t\t\t\t\t")
-	fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t\n", total.Lang.Name, total.FileCount, total.CodeLines, total.CommentLines, total.EmptyLines)
+	fmt.Fprintln(w, "\t\t\t\t\t\t")
+	fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t%d\t\n", total.Lang.Name, total.FileCount, total.CodeLines, total.CommentLines, total.MixedLines, total.EmptyLines)
 
 	w.Flush()
 }
@@ -71,8 +81,15 @@ func outputTable(info sloc.Info) {
 func outputCSV(info sloc.Info) {
 	println("Language, Files, Code, Comment, Blank")
 
-	for _, langInfo := range info {
-		fmt.Printf("%s, %d, %d, %d, %d\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.EmptyLines)
+	names := make([]string, 0, len(info))
+	for name := range info {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		langInfo := info[name]
+		fmt.Printf("%s, %d, %d, %d, %d, %d\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.MixedLines, langInfo.EmptyLines)
 	}
 }
 

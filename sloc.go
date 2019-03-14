@@ -24,6 +24,7 @@ type LanguageStats struct {
 	FileCount    int      `json:"FileCount"`
 	CodeLines    int      `json:"CodeLines"`
 	CommentLines int      `json:"CommentLines"`
+	MixedLines   int      `json:"MixedLines"`
 	EmptyLines   int      `json:"EmptyLines"`
 }
 
@@ -68,8 +69,9 @@ func countFileLines(filepath string) {
 
 	codeLines := 0
 	commentLines := 0
+	mixedLines := 0
 	emptyLines := 0
-	inComment := false
+	commentDepth := 0
 
 	lang := getLang(filepath)
 
@@ -85,23 +87,35 @@ func countFileLines(filepath string) {
 			continue
 		}
 
-		lineComment := startsWithOneOf(line, lang.Comments.LineCommentPrefixes)
-		startsComment := startsWithOneOf(line, lang.Comments.BlockCommentPrefixes)
-		endsComment := substrOneOf(line, lang.Comments.BlockCommentSuffixes)
+		hasCode := !startsWithOneOf(line, lang.Comments.LineCommentPrefixes) &&
+			!startsWithOneOf(line, lang.Comments.BlockCommentPrefixes)
+		lineComment := substrOneOf(line, lang.Comments.LineCommentPrefixes)
+		startsBlock := substrOneOf(line, lang.Comments.BlockCommentPrefixes)
+		endsBlock := substrOneOf(line, lang.Comments.BlockCommentSuffixes)
 
-		if lineComment || startsComment && endsComment {
+		if (hasCode && lineComment) || (hasCode && startsBlock && endsBlock) {
+			mixedLines++
+			continue
+		}
+
+		if lineComment || (startsBlock && endsBlock) {
 			commentLines++
 			continue
 		}
 
-		if inComment && endsComment {
-			inComment = false
+		if startsBlock {
+			commentDepth++
 			commentLines++
 			continue
 		}
 
-		if inComment || startsComment {
-			inComment = true
+		if endsBlock {
+			commentDepth--
+			commentLines++
+			continue
+		}
+
+		if commentDepth > 0 {
 			commentLines++
 			continue
 		}
@@ -112,6 +126,7 @@ func countFileLines(filepath string) {
 	if val, ok := info[lang.Name]; ok {
 		val.CodeLines += codeLines
 		val.CommentLines += commentLines
+		val.MixedLines += mixedLines
 		val.EmptyLines += emptyLines
 		val.FileCount++
 	} else {
@@ -120,6 +135,7 @@ func countFileLines(filepath string) {
 			1,
 			codeLines,
 			commentLines,
+			mixedLines,
 			emptyLines,
 		}
 	}

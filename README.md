@@ -9,6 +9,7 @@ Statistics include:
 - Total lines
 - Code lines
 - Comment lines (line and block comments)
+- Mixed lines (code and comments)
 - Empty lines
 
 ## Usage
@@ -32,30 +33,30 @@ sloc [options] <file>|<directory>
 ```
 $ sloc src/
 
-      Language  Files    Code  Comment  Blank
-          JSON    123   18133        0    189
-      Markdown    123   18588        0   7174
-    JavaScript   1988  155095    52031  23627
-          Html      6     433        0     10
-           XML      2    1948       11    235
-         Batch      6      42        0      0
-    Typescript     35    4204      524    614
-           CSS      3     284        1     18
-  Coffeescript      7      92       11     30
-         Shell      2      28        2     15
+      Language  Files    Code  Comment  Mixed  Blank
+         Batch      6      42        0      0      0
+           CSS      3     284        1      0     18
+  Coffeescript      7      88       11      4     30
+          Html      6     433        0      0     10
+          JSON    123   18133        0      0    189
+    JavaScript   1988  161269    41616   4241  23627
+      Markdown    123   18588        0      0   7174
+         Shell      2      28        2      0     15
+    Typescript     35    4161      522     45    614
+           XML      2    1948       11      0    235
 
-         Total   2295  198847    52580  31912
+         Total   2295  204974    42163   4290  31912
 ```
 
 ```
 $ sloc --exclude node_modules src/
 
-   Language  Files  Code  Comment  Blank
-  JavaScript     16   557        2    151
-        JSON      4   739        0      3
-    Markdown      2    14        0      9
+    Language  Files  Code  Comment  Mixed  Blank
+        JSON      4   739        0      0      3
+  JavaScript     16   552        2      5    151
+    Markdown      2    14        0      0      9
 
-       Total     22  1310        2    163
+       Total     22  1305        2      5    163
 ```
 
 ### Supported Languages
