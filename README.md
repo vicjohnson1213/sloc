@@ -1,6 +1,6 @@
 # SLOC
 
-![](https://img.shields.io/badge/languages-43-blue.svg) ![](https://img.shields.io/github/issues/vicjohnson1213/sloc.svg)
+![](https://img.shields.io/badge/languages-44-blue.svg) ![](https://img.shields.io/github/issues/vicjohnson1213/sloc.svg)
 
 Count how many lines are in your source code, broken down by the file type.
 
@@ -103,6 +103,7 @@ $ sloc --exclude node_modules src/
 - Typescript
 - VimL
 - Visual Basic
+- XAML
 - XML
 
 ## License

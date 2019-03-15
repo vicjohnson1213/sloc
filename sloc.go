@@ -68,7 +68,7 @@ func countFileLines(filepath string) {
 
 	lines := strings.Split(string(data), "\n")
 
-	TotalLines := 0
+	totalLines := 0
 	codeLines := 0
 	commentLines := 0
 	mixedLines := 0
@@ -84,7 +84,7 @@ func countFileLines(filepath string) {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		TotalLines++
+		totalLines++
 
 		if len(line) == 0 {
 			emptyLines++
@@ -128,6 +128,7 @@ func countFileLines(filepath string) {
 	}
 
 	if val, ok := info[lang.Name]; ok {
+		val.TotalLines += totalLines
 		val.CodeLines += codeLines
 		val.CommentLines += commentLines
 		val.MixedLines += mixedLines
@@ -137,7 +138,7 @@ func countFileLines(filepath string) {
 		info[lang.Name] = &LanguageStats{
 			lang,
 			1,
-			TotalLines,
+			totalLines,
 			codeLines,
 			commentLines,
 			mixedLines,
@@ -217,6 +218,7 @@ var languages = []Language{
 	Language{"Typescript", []string{".ts"}, cComments},
 	Language{"VimL", []string{".vim"}, vimComments},
 	Language{"Visual Basic", []string{".vb"}, vbComments},
+	Language{"XAML", []string{".xaml"}, xmlComments},
 	Language{"XML", []string{".xml"}, xmlComments},
 }
 
