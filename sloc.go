@@ -22,6 +22,7 @@ type Info map[string]*LanguageStats
 type LanguageStats struct {
 	Lang         Language `json:"Language"`
 	FileCount    int      `json:"FileCount"`
+	TotalLines   int      `json:"TotalLines"`
 	CodeLines    int      `json:"CodeLines"`
 	CommentLines int      `json:"CommentLines"`
 	MixedLines   int      `json:"MixedLines"`
@@ -67,6 +68,7 @@ func countFileLines(filepath string) {
 
 	lines := strings.Split(string(data), "\n")
 
+	TotalLines := 0
 	codeLines := 0
 	commentLines := 0
 	mixedLines := 0
@@ -81,6 +83,8 @@ func countFileLines(filepath string) {
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
+
+		TotalLines++
 
 		if len(line) == 0 {
 			emptyLines++
@@ -133,6 +137,7 @@ func countFileLines(filepath string) {
 		info[lang.Name] = &LanguageStats{
 			lang,
 			1,
+			TotalLines,
 			codeLines,
 			commentLines,
 			mixedLines,

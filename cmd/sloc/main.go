@@ -46,10 +46,11 @@ func main() {
 
 func outputTable(info sloc.Info) {
 	w := tabwriter.NewWriter(os.Stdout, 2, 8, 2, ' ', tabwriter.AlignRight)
-	fmt.Fprintln(w, "Language\tFiles\tCode\tComment\tMixed\tBlank\t")
+	fmt.Fprintln(w, "Language\tFiles\tTotal\tCode\tComment\tMixed\tBlank\t")
 	total := sloc.LanguageStats{
 		Lang:         sloc.Language{Name: "Total"},
 		FileCount:    0,
+		TotalLines:   0,
 		CodeLines:    0,
 		CommentLines: 0,
 		MixedLines:   0,
@@ -64,16 +65,17 @@ func outputTable(info sloc.Info) {
 
 	for _, name := range names {
 		langInfo := info[name]
-		fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t%d\t\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.MixedLines, langInfo.EmptyLines)
+		fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t%d\t%d\t\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.TotalLines, langInfo.CodeLines, langInfo.CommentLines, langInfo.MixedLines, langInfo.EmptyLines)
 		total.FileCount += langInfo.FileCount
+		total.TotalLines += langInfo.TotalLines
 		total.CodeLines += langInfo.CodeLines
 		total.CommentLines += langInfo.CommentLines
 		total.MixedLines += langInfo.MixedLines
 		total.EmptyLines += langInfo.EmptyLines
 	}
 
-	fmt.Fprintln(w, "\t\t\t\t\t\t")
-	fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t%d\t\n", total.Lang.Name, total.FileCount, total.CodeLines, total.CommentLines, total.MixedLines, total.EmptyLines)
+	fmt.Fprintln(w, "\t\t\t\t\t\t\t")
+	fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%d\t%d\t%d\t\n", total.Lang.Name, total.FileCount, total.TotalLines, total.CodeLines, total.CommentLines, total.MixedLines, total.EmptyLines)
 
 	w.Flush()
 }
@@ -89,7 +91,7 @@ func outputCSV(info sloc.Info) {
 
 	for _, name := range names {
 		langInfo := info[name]
-		fmt.Printf("%s, %d, %d, %d, %d, %d\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.CodeLines, langInfo.CommentLines, langInfo.MixedLines, langInfo.EmptyLines)
+		fmt.Printf("%s, %d, %d, %d, %d, %d, %d\n", langInfo.Lang.Name, langInfo.FileCount, langInfo.TotalLines, langInfo.CodeLines, langInfo.CommentLines, langInfo.MixedLines, langInfo.EmptyLines)
 	}
 }
 
